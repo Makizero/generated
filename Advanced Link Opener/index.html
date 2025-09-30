@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Продвинутый открыватель ссылок</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+        
+        .language-switcher {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .lang-btn {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .lang-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin: 10px 10px 20px 10px;
+            font-size: 1.5em;
+        }
+        
+        .editor-section {
+            margin-bottom: 25px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 15px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            line-height: 1.4;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+        }
+        
+        .auto-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        
+        .option-group {
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .option-group.active {
+            border-color: #3498db;
+            background: #e8f4f8;
+        }
+        
+        .option-group.disabled {
+            opacity: 0.6;
+            background: #f8f9fa;
+        }
+        
+        .option-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .option-header input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .option-header label {
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+        
+        .option-details {
+            padding-left: 28px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .option-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding-left: 28px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .batch-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        input[type="number"] {
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 80px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+        }
+        
+        .btn-start:hover {
+            background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+        
+        .btn-stop:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-alert {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+            font-weight: bold;
+        }
+        
+        .status-countdown {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #17a2b8;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .link-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .countdown-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d32f2f;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .deepseek-icon {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            display: inline-block;
+            position: relative;
+        }
+        
+        .deepseek-icon::after {
+            content: 'DS';
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .confirmation-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            border: 3px solid #ffc107;
+        }
+        
+        .confirmation-dialog h3 {
+            margin-bottom: 15px;
+            color: #d32f2f;
+            font-size: 1.3em;
+        }
+        
+        .confirmation-dialog p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #2c3e50;
+        }
+        
+        .dialog-tips {
+            background: #fff9e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+            text-align: left;
+        }
+        
+        .tip-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        
+        .tip-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .confirmation-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .confirmation-buttons button {
+            padding: 12px 25px;
+            min-width: 200px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .confirmation-buttons button:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .batch-control {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .option-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .language-switcher {
+                position: static;
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+            
+            .confirmation-dialog {
+                padding: 20px;
+            }
+            
+            .confirmation-buttons button {
+                min-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="confirmation-dialog" id="confirmationDialog">
+        <h3 id="dialogTitle">Важное предупреждение</h3>
+        <p id="dialogMessage"></p>
+        <div class="dialog-tips" id="dialogTips">
+            <div class="tip-item">
+                <span class="tip-icon">🔒</span>
+                <span id="tip1">Разрешите всплывающие окна для этого сайта</span>
+            </div>
+            <div class="tip-item">
+                <span class="tip-icon">📱</span>
+                <span id="tip2">Нажмите на иконку блокировки в адресной строке</span>
+            </div>
+            <div class="tip-item">
+                <span class="tip-icon">✅</span>
+                <span id="tip3">Выберите "Разрешить всплывающие окна"</span>
+            </div>
+        </div>
+        <div class="confirmation-buttons">
+            <button onclick="handleDialogConfirm(true)" id="understandButton">Понятно, продолжаем</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="language-switcher">
+            <button class="lang-btn active" onclick="changeLanguage('ru')">РУС</button>
+            <button class="lang-btn" onclick="changeLanguage('en')">EN</button>
+            <button class="lang-btn" onclick="changeLanguage('zh')">中文</button>
+            <button class="lang-btn" onclick="changeLanguage('ja')">日本語</button>
+        </div>
+        
+        <h1 id="mainTitle">🔗 Продвинутый открыватель ссылок</h1>
+        
+        <div class="editor-section">
+            <textarea id="linksInput" placeholder="Введите ссылки для открытия (каждая с новой строки)..."></textarea>
+            <div class="link-counter"><span id="linksLabel">Ссылок:</span> <span id="linksCount">0</span></div>
+        </div>
+
+        <div class="auto-options">
+            <div class="option-group" id="returnOption">
+                <div class="option-header">
+                    <input type="checkbox" id="returnAutoCheckbox" onchange="toggleOption('return')">
+                    <label for="returnAutoCheckbox" id="returnLabel">Авто-открытие при возврате на страницу</label>
+                </div>
+                <div class="option-details" id="returnDescription">
+                    Ссылки будут автоматически открываться при возврате на эту страницу (5 сек. отсчет)
+                </div>
+            </div>
+
+            <div class="option-group" id="intervalOption">
+                <div class="option-header">
+                    <input type="checkbox" id="intervalAutoCheckbox" onchange="toggleOption('interval')">
+                    <label for="intervalAutoCheckbox" id="intervalLabel">Авто-открытие по интервалу</label>
+                </div>
+                <div class="option-details" id="intervalDescription">
+                    Ссылки будут открываться автоматически через заданный интервал времени
+                </div>
+                <div class="option-controls">
+                    <span id="intervalText">Интервал:</span>
+                    <input type="number" id="intervalSeconds" value="10" min="5" max="300" disabled>
+                    <span id="secondsText">секунд</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="batch-control">
+                <span id="openText">Открывать по:</span>
+                <input type="number" id="batchSize" value="3" min="1" max="20">
+                <span id="linksText">ссылок</span>
+            </div>
+            <button class="btn-start" onclick="startProcess()" id="startButton">Запустить процесс</button>
+            <button class="btn-stop" onclick="stopProcess()" style="display: none;" id="stopButton">Остановить</button>
+        </div>
+
+        <div id="countdown" class="countdown-display" style="display: none;"></div>
+
+        <div id="status" class="status status-info">
+            Готов к работе. Введите ссылки и запустите процесс
+        </div>
+
+        <div class="footer">
+            <p>Created with <a href="https://chat.deepseek.com" target="_blank">Chat DeepSeek</a></p>
+        </div>
+    </div>
+
+    <script>
+        // ===== ЯЗЫКОВЫЕ НАСТРОЙКИ =====
+        const translations = {
+            ru: {
+                title: "🔗 Продвинутый открыватель ссылок",
+                placeholder: "Введите ссылки для открытия (каждая с новой строки)...",
+                linksLabel: "Ссылок:",
+                returnLabel: "Авто-открытие при возврате на страницу",
+                returnDescription: "Ссылки будут автоматически открываться при возврате на эту страницу (5 сек. отсчет)",
+                intervalLabel: "Авто-открытие по интервалу",
+                intervalDescription: "Ссылки будут открываться автоматически через заданный интервал времени",
+                intervalText: "Интервал:",
+                secondsText: "секунд",
+                openText: "Открывать по:",
+                linksText: "ссылок",
+                startButton: "Запустить процесс",
+                stopButton: "Остановить",
+                ready: "Готов к работе. Введите ссылки и запустите процесс",
+                noLinks: "Нет ссылок для открытия!",
+                ctrlWarning: "Для корректной работы необходимо разрешить всплывающие окна в браузере. Инструкция ниже:",
+                dialogTitle: "Важное предупреждение",
+                tip1: "Разрешите всплывающие окна для этого сайта",
+                tip2: "Нажмите на иконку блокировки в адресной строке",
+                tip3: "Выберите 'Разрешить всплывающие окна'",
+                understandButton: "Понятно, продолжаем"
+            },
+            en: {
+                title: "🔗 Advanced Link Opener",
+                placeholder: "Enter links to open (each on a new line)...",
+                linksLabel: "Links:",
+                returnLabel: "Auto-open when returning to page",
+                returnDescription: "Links will open automatically when returning to this page (5 sec countdown)",
+                intervalLabel: "Auto-open by interval",
+                intervalDescription: "Links will open automatically at specified time intervals",
+                intervalText: "Interval:",
+                secondsText: "seconds",
+                openText: "Open by:",
+                linksText: "links",
+                startButton: "Start Process",
+                stopButton: "Stop",
+                ready: "Ready to work. Enter links and start the process",
+                noLinks: "No links to open!",
+                ctrlWarning: "For proper operation, you need to allow pop-up windows in your browser. Instructions below:",
+                dialogTitle: "Important Warning",
+                tip1: "Allow pop-up windows for this site",
+                tip2: "Click the lock icon in the address bar",
+                tip3: "Select 'Allow pop-up windows'",
+                understandButton: "Understood, continue"
+            },
+            zh: {
+                title: "🔗 高级链接打开器",
+                placeholder: "输入要打开的链接（每行一个）...",
+                linksLabel: "链接:",
+                returnLabel: "返回页面时自动打开",
+                returnDescription: "返回此页面时链接将自动打开（5秒倒计时）",
+                intervalLabel: "按间隔自动打开",
+                intervalDescription: "链接将在指定时间间隔自动打开",
+                intervalText: "间隔:",
+                secondsText: "秒",
+                openText: "打开数量:",
+                linksText: "链接",
+                startButton: "启动进程",
+                stopButton: "停止",
+                ready: "准备就绪。输入链接并启动进程",
+                noLinks: "没有要打开的链接！",
+                ctrlWarning: "为了正常运行，您需要在浏览器中允许弹出窗口。以下说明：",
+                dialogTitle: "重要警告",
+                tip1: "允许此网站的弹出窗口",
+                tip2: "点击地址栏中的锁定图标",
+                tip3: "选择“允许弹出窗口”",
+                understandButton: "明白，继续"
+            },
+            ja: {
+                title: "🔗 高度なリンクオープナー",
+                placeholder: "開くリンクを入力してください（各行に1つ）...",
+                linksLabel: "リンク:",
+                returnLabel: "ページ戻り時に自動開放",
+                returnDescription: "このページに戻るとリンクが自動的に開きます（5秒カウントダウン）",
+                intervalLabel: "間隔での自動開放",
+                intervalDescription: "指定された時間間隔でリンクが自動的に開きます",
+                intervalText: "間隔:",
+                secondsText: "秒",
+                openText: "開く数:",
+                linksText: "リンク",
+                startButton: "プロセス開始",
+                stopButton: "停止",
+                ready: "準備完了。リンクを入力してプロセスを開始してください",
+                noLinks: "開くリンクがありません！",
+                ctrlWarning: "正常に動作させるには、ブラウザでポップアップウィンドウを許可する必要があります。以下の手順：",
+                dialogTitle: "重要な警告",
+                tip1: "このサイトのポップアップウィンドウを許可する",
+                tip2: "アドレスバーのロックアイコンをクリックする",
+                tip3: "「ポップアップウィンドウを許可する」を選択する",
+                understandButton: "理解しました、続行する"
+            }
+        };
+
+        let currentLanguage = 'ru';
+        
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            const t = translations[lang];
+            
+            // Обновляем все текстовые элементы
+            document.getElementById('mainTitle').textContent = t.title;
+            document.getElementById('linksInput').placeholder = t.placeholder;
+            document.getElementById('linksLabel').textContent = t.linksLabel;
+            document.getElementById('returnLabel').textContent = t.returnLabel;
+            document.getElementById('returnDescription').textContent = t.returnDescription;
+            document.getElementById('intervalLabel').textContent = t.intervalLabel;
+            document.getElementById('intervalDescription').textContent = t.intervalDescription;
+            document.getElementById('intervalText').textContent = t.intervalText;
+            document.getElementById('secondsText').textContent = t.secondsText;
+            document.getElementById('openText').textContent = t.openText;
+            document.getElementById('linksText').textContent = t.linksText;
+            document.getElementById('startButton').textContent = t.startButton;
+            document.getElementById('stopButton').textContent = t.stopButton;
+            
+            // Обновляем кнопки языка
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.lang-btn[onclick="changeLanguage('${lang}')"]`).classList.add('active');
+            
+            updateStatus();
+        }
+
+        // ===== ОСНОВНАЯ ЛОГИКА =====
+        let currentMode = null;
+        let countdownTimer = null;
+        let intervalTimer = null;
+        let countdownSeconds = 5;
+        let pageVisible = true;
+        let processActive = false;
+        let dialogCallback = null;
+
+        // Диалоговое окно вместо alert
+        function showDialog(title, message, callback) {
+            const t = translations[currentLanguage];
+            document.getElementById('dialogTitle').textContent = t.dialogTitle;
+            document.getElementById('dialogMessage').textContent = message;
+            document.getElementById('tip1').textContent = t.tip1;
+            document.getElementById('tip2').textContent = t.tip2;
+            document.getElementById('tip3').textContent = t.tip3;
+            document.getElementById('understandButton').textContent = t.understandButton;
+            
+            document.getElementById('confirmationDialog').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            dialogCallback = callback;
+        }
+
+        function handleDialogConfirm(confirmed) {
+            document.getElementById('confirmationDialog').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+            if (dialogCallback) {
+                dialogCallback(confirmed);
+            }
+        }
+
+        // Переключение между опциями
+        function toggleOption(mode) {
+            const returnCheckbox = document.getElementById('returnAutoCheckbox');
+            const intervalCheckbox = document.getElementById('intervalAutoCheckbox');
+            const returnOption = document.getElementById('returnOption');
+            const intervalOption = document.getElementById('intervalOption');
+            const intervalInput = document.getElementById('intervalSeconds');
+
+            if (mode === 'return' && returnCheckbox.checked) {
+                intervalCheckbox.checked = false;
+                intervalInput.disabled = true;
+                intervalOption.classList.remove('active');
+                intervalOption.classList.add('disabled');
+                returnOption.classList.add('active');
+                returnOption.classList.remove('disabled');
+                currentMode = 'return';
+            } 
+            else if (mode === 'interval' && intervalCheckbox.checked) {
+                returnCheckbox.checked = false;
+                intervalInput.disabled = false;
+                intervalOption.classList.add('active');
+                intervalOption.classList.remove('disabled');
+                returnOption.classList.remove('active');
+                returnOption.classList.add('disabled');
+                currentMode = 'interval';
+            }
+            else {
+                returnOption.classList.remove('active');
+                intervalOption.classList.remove('active');
+                returnOption.classList.remove('disabled');
+                intervalOption.classList.remove('disabled');
+                intervalInput.disabled = true;
+                currentMode = null;
+            }
+
+            updateStatus();
+        }
+
+        function getCurrentLinks() {
+            const text = document.getElementById('linksInput').value.trim();
+            if (!text) return [];
+            
+            return text.split('\n')
+                .map(link => link.trim())
+                .filter(link => link.length > 0);
+        }
+
+        function updateLinksTextarea(linksArray) {
+            document.getElementById('linksInput').value = linksArray.join('\n');
+            document.getElementById('linksCount').textContent = linksArray.length;
+        }
+
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status status-${type}`;
+        }
+
+        function updateStatus() {
+            const t = translations[currentLanguage];
+            if (!currentMode) {
+                showStatus(t.ready, 'info');
+            } else if (currentMode === 'return') {
+                showStatus(t.ready, 'info');
+            } else if (currentMode === 'interval') {
+                const interval = document.getElementById('intervalSeconds').value;
+                showStatus(t.ready, 'info');
+            }
+        }
+
+        function startReturnCountdown() {
+            if (currentMode !== 'return' || !processActive) return;
+            
+            const links = getCurrentLinks();
+            if (links.length === 0) {
+                stopProcess();
+                showStatus('Все ссылки обработаны! Процесс остановлен.', 'success');
+                return;
+            }
+
+            // Останавливаем предыдущий таймер если был
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
+            countdownSeconds = 5;
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.style.display = 'block';
+            countdownElement.textContent = `Следующие ссылки откроются через: ${countdownSeconds}...`;
+
+            countdownTimer = setInterval(() => {
+                countdownElement.textContent = `Следующие ссылки откроются через: ${countdownSeconds}...`;
+                
+                if (countdownSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                    countdownElement.style.display = 'none';
+                    
+                    // ОТКРЫВАЕМ СЛЕДУЮЩУЮ ПАРТИЮ ТОЛЬКО ЕСЛИ ПОЛЬЗОВАТЕЛЬ НА СТРАНИЦЕ
+                    if (pageVisible && processActive) {
+                        openNextBatch();
+                    }
+                    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УШЕЛ - ЖДЕМ ЕГО ВОЗВРАЩЕНИЯ
+                }
+                countdownSeconds--;
+            }, 1000);
+        }
+
+        function startIntervalProcess() {
+            if (currentMode !== 'interval' || !processActive) return;
+            
+            const intervalSeconds = parseInt(document.getElementById('intervalSeconds').value) || 10;
+            const links = getCurrentLinks();
+            
+            if (links.length === 0) {
+                stopProcess();
+                showStatus('Все ссылки обработаны! Процесс остановлен.', 'success');
+                return;
+            }
+
+            showStatus(`Авто-открытие запущено! Интервал: ${intervalSeconds} сек.`, 'success');
+            
+            openNextBatch();
+            
+            intervalTimer = setInterval(() => {
+                if (processActive) {
+                    openNextBatch();
+                }
+            }, intervalSeconds * 1000);
+        }
+
+        function openNextBatch() {
+            const currentLinks = getCurrentLinks();
+            if (currentLinks.length === 0) {
+                stopProcess();
+                showStatus('Все ссылки обработаны!', 'success');
+                return;
+            }
+
+            const batchSize = Math.min(parseInt(document.getElementById('batchSize').value) || 3, currentLinks.length);
+            const batchToOpen = currentLinks.slice(0, batchSize);
+
+            try {
+                // ЗАПУСКАЕМ ТАЙМЕР ПАРАЛЛЕЛЬНО С ОТКРЫТИЕМ (ЕСЛИ ВКЛЮЧЕН РЕЖИМ RETURN)
+                if (currentMode === 'return' && processActive && currentLinks.length > batchSize) {
+                    startReturnCountdown();
+                }
+
+                // Открываем ссылки
+                batchToOpen.forEach((link, index) => {
+                    setTimeout(() => {
+                        window.open(link, '_blank');
+                    }, index * 100);
+                });
+
+                // Удаляем открытые ссылки
+                const remainingLinks = currentLinks.slice(batchToOpen.length);
+                updateLinksTextarea(remainingLinks);
+
+                showStatus(`Открыто ${batchToOpen.length} ссылок! Осталось: ${remainingLinks.length}`, 'success');
+
+                if (remainingLinks.length === 0) {
+                    stopProcess();
+                    showStatus('Все ссылки обработаны! Процесс завершен.', 'success');
+                }
+
+            } catch (error) {
+                showStatus('Ошибка открытия! Разрешите всплывающие окна.', 'error');
+            }
+        }
+
+        function startProcess() {
+            const t = translations[currentLanguage];
+            
+            if (getCurrentLinks().length === 0) {
+                showStatus(t.noLinks, 'error');
+                return;
+            }
+
+            // Показываем предупреждение о Ctrl в диалоговом окне
+            showDialog(t.title, t.ctrlWarning, function(confirmed) {
+                if (!confirmed) return;
+
+                processActive = true;
+                document.querySelector('.btn-start').style.display = 'none';
+                document.querySelector('.btn-stop').style.display = 'block';
+
+                document.getElementById('returnAutoCheckbox').disabled = true;
+                document.getElementById('intervalAutoCheckbox').disabled = true;
+                document.getElementById('intervalSeconds').disabled = true;
+                document.getElementById('batchSize').disabled = true;
+
+                if (currentMode === 'return') {
+                    showStatus('Режим "При возврате" запущен! Открывайте ссылки и возвращайтесь для продолжения.', 'success');
+                    // ЗАПУСКАЕМ ПРОЦЕСС И ТАЙМЕР ПАРАЛЛЕЛЬНО
+                    openNextBatch();
+                } else if (currentMode === 'interval') {
+                    startIntervalProcess();
+                } else {
+                    // ЕСЛИ РЕЖИМ НЕ ВЫБРАН - ПРОСТО ОТКРЫВАЕМ ОДНУ ПАРТИЮ
+                    openNextBatch();
+                }
+            });
+        }
+
+        function stopProcess() {
+            processActive = false;
+            
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+            
+            if (intervalTimer) {
+                clearInterval(intervalTimer);
+                intervalTimer = null;
+            }
+
+            document.getElementById('countdown').style.display = 'none';
+            document.querySelector('.btn-start').style.display = 'block';
+            document.querySelector('.btn-stop').style.display = 'none';
+
+            document.getElementById('returnAutoCheckbox').disabled = false;
+            document.getElementById('intervalAutoCheckbox').disabled = false;
+            document.getElementById('intervalSeconds').disabled = !document.getElementById('intervalAutoCheckbox').checked;
+            document.getElementById('batchSize').disabled = false;
+
+            showStatus('Процесс остановлен. Можно изменить настройки и запустить снова.', 'info');
+        }
+
+        function handleVisibilityChange() {
+            const wasVisible = pageVisible;
+            pageVisible = !document.hidden;
+            
+            // ЕСЛИ ПОЛЬЗОВАТЕЛЬ ВЕРНУЛСЯ НА СТРАНИЦУ И ТАЙМЕР УЖЕ ЗАВЕРШИЛСЯ
+            if (pageVisible && !wasVisible && processActive && currentMode === 'return' && 
+                countdownSeconds <= 0 && !countdownTimer) {
+                openNextBatch();
+            }
+            
+            // ЕСЛИ ПОЛЬЗОВАТЕЛЬ ВЕРНУЛСЯ И ТАЙМЕР ЕЩЕ ИДЕТ - НИЧЕГО НЕ ДЕЛАЕМ
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            document.getElementById('linksInput').addEventListener('input', function() {
+                const links = getCurrentLinks();
+                document.getElementById('linksCount').textContent = links.length;
+                updateStatus();
+            });
+
+            updateStatus();
+        });
+
+        window.addEventListener('beforeunload', function(e) {
+            const links = getCurrentLinks();
+            if (links.length > 0 && processActive) {
+                e.preventDefault();
+                e.returnValue = 'Процесс еще не завершен!';
+                return 'Процесс еще не завершен!';
+            }
+        });
+    </script>
+</body>
+</html>
