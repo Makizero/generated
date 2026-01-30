@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Генератор счётчика сезонов аниме</title>
+    <style>
+        body { font-family: Arial; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-bottom: 30px; 
+            text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 2rem; }
+        .header p { opacity: 0.9; margin-top: 10px; }
+        
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        input[type="number"] {
+            width: 100px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .checkbox { margin: 15px 0; }
+        .checkbox label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .checkbox input { width: auto; }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 20px;
+        }
+        .btn:hover { background: #5a67d8; }
+        
+        .code-output {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 5px;
+            flex: 1;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+		.footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #6c757d;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Генератор счётчика сезонов аниме</h1>
+            <p>Создает полные CSS файлы с расчетом дат, склонениями и процентнтным соотношением в прогресс-баре</p>
+        </div>
+        
+        <div class="panel">
+            <div class="input-group">
+                <label>С какого года начать:</label>
+                <input type="number" id="startYear" value="2026" min="2026" max="9999">
+            </div>
+            
+            <div class="input-group">
+                <label>Сколько лет сгенерировать:</label>
+                <input type="number" id="yearsCount" value="10" min="1" max="999">
+            </div>
+            
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" id="compressCSS" checked>
+                    Сжать CSS (убрать пробелы и комментарии)
+                </label>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalYears">0</div>
+                    <div class="stat-label">Лет</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalDays">0</div>
+                    <div class="stat-label">Дней</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="fileSize">0 MB</div>
+                    <div class="stat-label">Примерный размер</div>
+                </div>
+            </div>
+            
+            <button class="btn" id="downloadBtn">Скачать ZIP архив</button>
+        </div>
+        
+        <div class="panel">
+            <h3>Пример генерируемого кода:</h3>
+            <div class="codeOutput" id="codeOutput">
+// Нажмите "Сгенерировать CSS" чтобы увидеть пример
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Created with <a href="https://chat.deepseek.com/" target="_blank">Chat DeepSeek</a>
+    </div>
+    
+</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        class SeasonGenerator {
+            constructor() {
+                this.seasons = [
+                    { month: 1, day: 14, name: 'ЗИМНЕГО' },
+                    { month: 4, day: 14, name: 'ВЕСЕННЕГО' },
+                    { month: 7, day: 14, name: 'ЛЕТНЕГО' },
+                    { month: 10, day: 14, name: 'ОСЕННЕГО' }
+                ];
+                this.seasonDuration = 14; // дней
+                this.totalCycleDays = 91; // 77 междуми + 14 сезон
+            }
+            
+            // Правильное склонение слова "день"
+            getDayWord(days) {
+                if (days % 100 >= 11 && days % 100 <= 19) return "дней";
+                switch (days % 10) {
+                    case 1: return "день";
+                    case 2:
+                    case 3:
+                    case 4: return "дня";
+                    default: return "дней";
+                }
+            }
+            
+            // Определить ближайший сезон для даты
+            getSeasonInfo(date) {
+                const year = date.getFullYear();
+                
+                // Создаем все даты сезонов на этот и следующий год
+                const seasonDates = [];
+                
+                for (let i = 0; i < this.seasons.length; i++) {
+                    const season = this.seasons[i];
+                    
+                    // Текущий год
+                    try {
+                        const startDate = new Date(year, season.month - 1, season.day);
+                        seasonDates.push({
+                            date: startDate,
+                            title: `НАЧАЛА ${season.name}`,
+                            type: 'start',
+                            season
+                        });
+                        
+                        const endDate = new Date(startDate);
+                        endDate.setDate(endDate.getDate() + this.seasonDuration);
+                        seasonDates.push({
+                            date: endDate,
+                            title: `КОНЦА ${season.name}`,
+                            type: 'end',
+                            season
+                        });
+                    } catch (e) {}
+                    
+                    // Следующий год для зимнего
+                    if (season.month === 1) {
+                        try {
+                            const nextYearDate = new Date(year + 1, season.month - 1, season.day);
+                            seasonDates.push({
+                                date: nextYearDate,
+                                title: `НАЧАЛА ${season.name}`,
+                                type: 'next_year',
+                                season
+                            });
+                        } catch (e) {}
+                    }
+                }
+                
+                // Сортируем по дате
+                seasonDates.sort((a, b) => a.date - b.date);
+                
+                // Находим ближайшее будущее событие
+                for (const event of seasonDates) {
+                    if (event.date > date) { // ИЗМЕНЕНИЕ: > вместо >=
+                        const diffTime = event.date - date;
+                        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        // Расчет процента для прогресс-бара
+                        let percentage = 0;
+                        
+                        // ИСПРАВЛЕНИЕ ЛОГИКИ:
+                        if (event.type === 'start') {
+                            // За день до начала: "1 день до начала", на следующий день: "14 дней до конца"
+                            const daysUntilStart = daysLeft;
+                            percentage = (this.totalCycleDays - daysUntilStart) / this.totalCycleDays * 100;
+                            
+                            return {
+                                title: `ДО ${event.title}`,
+                                days: daysUntilStart,
+                                percentage: Math.max(0, Math.min(100, percentage.toFixed(2))),
+                                nextDate: event.date
+                            };
+                        } else if (event.type === 'end') {
+                            // Во время
+                            const daysUntilEnd = daysLeft;
+                            const daysPassed = this.seasonDuration - daysUntilEnd;
+                            percentage = daysPassed / this.seasonDuration * 100;
+                            
+                            return {
+                                title: `ДО ${event.title}`,
+                                days: daysUntilEnd,
+                                percentage: Math.max(0, Math.min(100, percentage.toFixed(2))),
+                                nextDate: event.date
+                            };
+                        }
+                    }
+                }
+                
+                // Проверяем, находимся ли мы ВО ВРЕМЯ (если date равен дате начала)
+                for (const event of seasonDates) {
+                    if (event.date.getTime() === date.getTime() && event.type === 'start') {
+                        // СЕГОДНЯ - НАЧАЛО!
+                        const endDate = new Date(event.date);
+                        endDate.setDate(endDate.getDate() + this.seasonDuration);
+                        const diffTime = endDate - date;
+                        const daysUntilEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        return {
+                            title: `ДО КОНЦА ${event.season.name}`,
+                            days: daysUntilEnd,
+                            percentage: 0, // первый день - 0% пройдено
+                            nextDate: endDate
+                        };
+                    }
+                }
+                
+                // Если ничего не найдено (последний день года)
+                const nextWinter = new Date(year + 1, 0, 14);
+                const diffTime = nextWinter - date;
+                const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const percentage = (this.totalCycleDays - daysLeft) / this.totalCycleDays * 100;
+                
+                return {
+                    title: "ДО НАЧАЛА ЗИМНЕГО",
+                    days: daysLeft,
+                    percentage: Math.max(0, Math.min(100, percentage.toFixed(2))),
+                    nextDate: nextWinter
+                };
+            }
+            
+            // Сгенерировать CSS для года (ТОЛЬКО правила для дат)
+            generateYearCSS(year, compress = false) {
+                let css = compress ? '' : `/* СТИЛИ ДЛЯ ${year} ГОДА */\n/* Только правила для дат */\n\n`;
+                
+                const startDate = new Date(year, 0, 1);
+                const endDate = new Date(year, 11, 31);
+                
+                let currentDate = new Date(startDate);
+                
+                while (currentDate <= endDate) {
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const monthStr = dateStr.substring(0, 7);
+                    
+                    const seasonInfo = this.getSeasonInfo(new Date(currentDate));
+                    const dayWord = this.getDayWord(seasonInfo.days);
+                    
+                    // Текст счётчика
+                    let textRule = '';
+                    if (compress) {
+                        textRule = `body[data-server_time^="${dateStr}"].p-profiles .lifetime .title>.label::after{content:"${seasonInfo.days} ${dayWord} ${seasonInfo.title.toLowerCase()} аниме марафона"}`;
+                    } else {
+                        textRule = `/* ${dateStr} */\nbody[data-server_time^="${monthStr}"].p-profiles .lifetime .title > .label::after {\n    content: "${seasonInfo.days} ${dayWord} ${seasonInfo.title.toLowerCase()} аниме марафона";\n}`;
+                    }
+                    
+                    // Правило для прогресс-бара
+                    let barRule = '';
+                    if (seasonInfo.percentage > 0) {
+                        if (compress) {
+                            barRule = `body[data-server_time^="${dateStr}"].p-profiles-show .b-stats_bar.lifetime .bar .first{width:${seasonInfo.percentage}%!important}`;
+                        } else {
+                            barRule = `body[data-server_time^="${monthStr}"].p-profiles-show .b-stats_bar.lifetime .bar .first {\n    width: ${seasonInfo.percentage}% !important;\n}`;
+                        }
+                    }
+                    
+                    if (compress) {
+                        css += textRule;
+                        if (barRule) css += barRule;
+                    } else {
+                        css += textRule + '\n';
+                        if (barRule) css += barRule + '\n';
+                        css += '\n';
+                    }
+                    
+                    // Следующий день
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                return css;
+            }
+            
+            // Сгенерировать базовые стили (только один раз в all-years.css)
+            generateBaseCSS(compress = false) {
+                if (compress) {
+                    return `.profile-content .lifetime .cuts,.p-profiles-show .b-stats_bar.lifetime .times .time.checked{display:none}.p-profiles .lifetime .title>.label::after{position:absolute;top:120%;color:var(--color-text-primary);font-size:12px}.p-profiles-show .b-stats_bar.lifetime .bar .first{background:linear-gradient(to left,var(--color-background),var(--color-accent)15%,var(--color-primary))}`;
+                }
+                
+                return `.profile-content .lifetime .cuts,
+.p-profiles-show .b-stats_bar.lifetime .times .time.checked {
+    display: none;
+}
+
+.p-profiles .lifetime .title > .label::after {
+    position: absolute;
+    top: 120%;
+    color: var(--color-text-primary);
+    font-size: 12px;
+}
+
+.p-profiles-show .b-stats_bar.lifetime .bar .first {
+    background: linear-gradient(to left, var(--color-background), var(--color-accent) 15%, var(--color-primary)) !important;
+}`;
+            }
+            
+            // Сгенерировать all-years.css с базовыми стилями + маршрутизатором
+            generateAllYearsCSS(startYear, yearsCount, compress = false) {
+                let css = '';
+                
+                // Базовые стили
+                css += this.generateBaseCSS(compress);
+                
+                if (!compress) {
+                    css += '\n\n';
+                    css += `/* МАРШРУТИЗАТОР CSS ФАЙЛОВ */\n`;
+                    css += `/* Генерация: ${startYear}-${startYear + yearsCount - 1} */\n`;
+                    css += `/* Базовые стили уже подключены выше */\n\n`;
+                } else {
+                    css += '/*@*/';
+                }
+                
+                // Импорты для каждого года
+                for (let year = startYear; year < startYear + yearsCount; year++) {
+                    if (compress) {
+                        css += `@import url("${year}.css") supports(selector(body[data-server_time^="${year}"]));`;
+                    } else {
+                        css += `@import url("${year}.css") supports(selector(body[data-server_time^="${year}"]));\n`;
+                    }
+                }
+                
+                return css;
+            }
+        }
+        
+        // Инициализация
+        const generator = new SeasonGenerator();
+        const startYearInput = document.getElementById('startYear');
+        const yearsCountInput = document.getElementById('yearsCount');
+        const compressCSSInput = document.getElementById('compressCSS');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const codeOutput = document.getElementById('codeOutput');
+        const totalYearsEl = document.getElementById('totalYears');
+        const totalDaysEl = document.getElementById('totalDays');
+        const fileSizeEl = document.getElementById('fileSize');
+        
+        // Обновление статистики
+        function updateStats() {
+            const years = parseInt(yearsCountInput.value);
+            totalYearsEl.textContent = years;
+            totalDaysEl.textContent = (years * 365).toLocaleString();
+            
+            // Примерный расчет размера (теперь меньше, т.к. базовые стили только один раз)
+            const approxSize = (years * 365 * 150) / (1024 * 1024); // ~150 байт на день (без базовых стилей)
+            fileSizeEl.textContent = approxSize.toFixed(1) + ' MB';
+        }
+        
+        // Показать пример
+        function showExample() {
+            const compress = compressCSSInput.checked;
+            const startYear = parseInt(startYearInput.value);
+            
+            // Генерируем пример для 2026 года
+            const allYearsCSS = generator.generateAllYearsCSS(startYear, 3, compress);
+            const yearCSS = generator.generateYearCSS(2026, compress);
+            
+            let example = '';
+            if (compress) {
+                example = '/* all-years.css */\n' + allYearsCSS + '\n\n' +
+                         '/* 2026.css */\n' + yearCSS.substring(0, 500) + '...';
+            } else {
+                example = '/* all-years.css */\n' + allYearsCSS + '\n\n' +
+                         '/* 2026.css (первые строки) */\n' + yearCSS.substring(0, 1000) + '\n...';
+            }
+            
+            codeOutput.textContent = example;
+        }
+        
+        // Скачать ZIP архив
+        async function downloadZip() {
+            const startYear = parseInt(startYearInput.value);
+            const yearsCount = parseInt(yearsCountInput.value);
+            const compress = compressCSSInput.checked;
+            
+            try {
+                const zip = new JSZip();
+                
+                // Основной файл all-years.css с базовыми стилями + импортами
+                zip.file('all-years.css', generator.generateAllYearsCSS(startYear, yearsCount, false));
+                
+                // Годовые файлы (ТОЛЬКО правила для дат, без базовых стилей)
+                for (let year = startYear; year < startYear + yearsCount; year++) {
+                    const yearCSS = generator.generateYearCSS(year, compress);
+                    zip.file(`${year}.css`, yearCSS);
+                    
+                    // Пауза чтобы не завис браузер
+                    if ((year - startYear) % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                }
+                
+                // Инструкция
+                const instruction = `КАК ЭТО РАБОТАЕТ:
+1. Загрузите все файлы на хостинг
+2. В блокноте заменить
+   @import url("20**.css") на @import url("https://ваш-хостинг/20**.css")
+3. В CSS редакторе Shikimori добавьте ОДНУ строку:
+   @import url("https://ваш-хостинг/all-years.css");
+   Например, если data-server_time="2026-03-15", загрузится только 2026.css
+
+ВСЕГО СГЕНЕРИРОВАНО:
+• Лет: ${yearsCount} (${startYear}-${startYear + yearsCount - 1})
+• CSS правил: ${yearsCount * 365} (по одному на каждый день)
+• Базовые стили: только в all-years.css`;
+                
+                zip.file('Readme.txt', instruction);
+                
+                // Генерация и скачивание
+                const content = await zip.generateAsync({type: "blob"});
+                const url = URL.createObjectURL(content);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `anime_seasons_optimized_${startYear}_${startYear + yearsCount - 1}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(url);
+                
+                alert(`Архив скачан! ${yearsCount} лет оптимизированного CSS.`);
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка при создании архива');
+            }
+        }
+        
+        // События
+        startYearInput.addEventListener('input', updateStats);
+        yearsCountInput.addEventListener('input', updateStats);
+        compressCSSInput.addEventListener('change', showExample);
+        
+        downloadBtn.addEventListener('click', downloadZip);
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            // Установить текущий год
+            const currentYear = new Date().getFullYear();
+            startYearInput.value = currentYear;
+            
+            updateStats();
+            showExample();
+        });
+    </script>
+</body>
+</html>
